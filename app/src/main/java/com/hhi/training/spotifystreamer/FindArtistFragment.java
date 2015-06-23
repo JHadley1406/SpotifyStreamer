@@ -27,6 +27,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -159,7 +162,7 @@ public class FindArtistFragment extends Fragment {
         spotifyService.searchArtists(artistName, new Callback<ArtistsPager>() {
             @Override
             public void success(ArtistsPager artistsPager, Response response) {
-                if(artistsPager != null)
+                if (artistsPager != null)
                     assignArtists((ArrayList) artistsPager.artists.items);
 
                 getActivity().runOnUiThread(new Runnable() {
@@ -184,11 +187,29 @@ public class FindArtistFragment extends Fragment {
     private void assignArtists(ArrayList<Artist> artists){
         returnedArtists = new ArrayList<>();
         for(Artist artist: artists){
-            if(artist.images.size()> 0)
+            if(artist.images.size() > 0 && validateUrl(artist.images.get(0).url))
                 returnedArtists.add(new ArtistData(artist.id, artist.name, artist.images.get(0).url));
             else
                 returnedArtists.add(new ArtistData(artist.id, artist.name, DEFAULT_IMAGE));
         }
+    }
+
+    private boolean validateUrl(String image){
+        URL url;
+
+        try{
+            url = new URL(image);
+        } catch(MalformedURLException e){
+            return false;
+        }
+
+        try{
+            url.toURI();
+        } catch (URISyntaxException e){
+            return false;
+        }
+
+        return true;
     }
 
     private void refreshAdapter(){

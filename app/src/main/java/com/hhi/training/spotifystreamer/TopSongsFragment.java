@@ -15,7 +15,10 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -127,7 +130,7 @@ public class TopSongsFragment extends Fragment {
 
             @Override
             public void success(Tracks tracks, Response response) {
-                if(tracks != null)
+                if (tracks != null)
                     assignSongs((ArrayList) tracks.tracks);
 
                 getActivity().runOnUiThread(new Runnable() {
@@ -151,11 +154,30 @@ public class TopSongsFragment extends Fragment {
     private void assignSongs(ArrayList<Track> songs){
         returnedSongs = new ArrayList<>();
         for(Track song: songs){
-            if(song.album.images.size() > 0)
+
+            if(song.album.images.size() > 0 && validateUrl(song.album.images.get(0).url))
                 returnedSongs.add(new SongData(song.id, song.name, song.album.name, song.album.images.get(0).url));
             else
                 returnedSongs.add(new SongData(song.id, song.name, song.album.name, DEFAULT_IMAGE));
         }
+    }
+
+    private boolean validateUrl(String image){
+        URL url;
+
+        try{
+            url = new URL(image);
+        } catch(MalformedURLException e){
+            return false;
+        }
+
+        try{
+            url.toURI();
+        } catch (URISyntaxException e){
+            return false;
+        }
+
+        return true;
     }
 
     private void refreshAdapter(){
