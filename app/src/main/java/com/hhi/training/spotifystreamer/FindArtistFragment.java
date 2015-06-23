@@ -159,15 +159,17 @@ public class FindArtistFragment extends Fragment {
         spotifyService.searchArtists(artistName, new Callback<ArtistsPager>() {
             @Override
             public void success(ArtistsPager artistsPager, Response response) {
-                assignArtists((ArrayList) artistsPager.artists.items);
+                if(artistsPager != null)
+                    assignArtists((ArrayList) artistsPager.artists.items);
 
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         if (returnedArtists.size() == 0)
-                            makeToast("No Artists Found, Try Refining Your Search", Toast.LENGTH_LONG);
-
-                        refreshAdapter();
+                            makeToast("No Artists Found, Try Refining Your Search\n"
+                                    + "Or Check Your Internet Connection", Toast.LENGTH_LONG);
+                        else
+                            refreshAdapter();
                     }
                 });
             }

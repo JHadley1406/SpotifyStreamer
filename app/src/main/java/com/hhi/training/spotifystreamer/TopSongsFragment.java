@@ -127,15 +127,16 @@ public class TopSongsFragment extends Fragment {
 
             @Override
             public void success(Tracks tracks, Response response) {
-                assignSongs((ArrayList) tracks.tracks);
+                if(tracks != null)
+                    assignSongs((ArrayList) tracks.tracks);
 
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         if (returnedSongs.size() == 0)
                             makeToast("No Tracks Found For This Artist", Toast.LENGTH_LONG);
-
-                        refreshAdapter();
+                        else
+                            refreshAdapter();
                     }
                 });
             }
