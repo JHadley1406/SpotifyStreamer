@@ -5,4 +5,12 @@
 
     <string name="default_string">Something Has Gone Wrong!</string>
 
+    <string name="not_online">No Internet Connection Detected</string>
+
+    <string name="no_artist">No Matching Artists Found\nTry Refining Your Search</string>
+
+    <string name="artist_search_hint">Enter Artist Name</string>
+
+    <string name="no_songs">No Tracks Found For This Artist</string>
+
 </resources>

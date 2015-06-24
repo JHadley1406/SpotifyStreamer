@@ -3,7 +3,10 @@ package com.hhi.training.spotifystreamer;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.util.Log;
@@ -122,33 +125,37 @@ public class TopSongsFragment extends Fragment {
     }
 
     private void getTracks(String artistId){
-        SpotifyApi spotifyApi = new SpotifyApi();
-        SpotifyService spotifyService = spotifyApi.getService();
-        Map<String, Object> spotifyOptions = new HashMap<>();
-        spotifyOptions.put(COUNTRY_OPTION, COUNTRY_TAG);
-        spotifyService.getArtistTopTrack(artistId, spotifyOptions, new Callback<Tracks>() {
+        if(isOnline()) {
+            SpotifyApi spotifyApi = new SpotifyApi();
+            SpotifyService spotifyService = spotifyApi.getService();
+            Map<String, Object> spotifyOptions = new HashMap<>();
+            spotifyOptions.put(COUNTRY_OPTION, COUNTRY_TAG);
+            spotifyService.getArtistTopTrack(artistId, spotifyOptions, new Callback<Tracks>() {
 
-            @Override
-            public void success(Tracks tracks, Response response) {
-                if (tracks != null)
-                    assignSongs((ArrayList) tracks.tracks);
+                @Override
+                public void success(Tracks tracks, Response response) {
+                    if (tracks != null)
+                        assignSongs((ArrayList) tracks.tracks);
 
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (returnedSongs.size() == 0)
-                            makeToast("No Tracks Found For This Artist", Toast.LENGTH_LONG);
-                        else
-                            refreshAdapter();
-                    }
-                });
-            }
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (returnedSongs.size() == 0)
+                                makeToast(getResources().getString(R.string.no_songs), Toast.LENGTH_LONG);
+                            else
+                                refreshAdapter();
+                        }
+                    });
+                }
 
-            @Override
-            public void failure(RetrofitError error) {
-                Log.e(LOG_TAG, error.toString());
-            }
-        });
+                @Override
+                public void failure(RetrofitError error) {
+                    Log.e(LOG_TAG, error.toString());
+                }
+            });
+        }
+        else
+            makeToast(getResources().getString(R.string.not_online), Toast.LENGTH_LONG);
     }
 
     private void assignSongs(ArrayList<Track> songs){
@@ -160,6 +167,15 @@ public class TopSongsFragment extends Fragment {
             else
                 returnedSongs.add(new SongData(song.id, song.name, song.album.name, DEFAULT_IMAGE));
         }
+    }
+
+    // Code suggested by Udacity Reviewer
+    private boolean isOnline()
+    {
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 
     private boolean validateUrl(String image){

@@ -4,10 +4,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Fragment;
 import android.support.v7.widget.LinearLayoutCompat;
+import android.support.v7.widget.SearchView;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
@@ -52,7 +55,7 @@ public class FindArtistFragment extends Fragment {
     private final String DEFAULT_IMAGE = "android.resource://com.hhi.training.spotifystreamer/" + R.mipmap.ic_launcher;
     private ArrayList<ArtistData> returnedArtists;
 
-    private EditText artistName;
+    private SearchView artistName;
     private ListView artistList;
 
     private FindArtistListAdapter artistAdapter;
@@ -72,7 +75,7 @@ public class FindArtistFragment extends Fragment {
 
         View rootView = inflater.inflate(R.layout.fragment_find_artist, container, false);
 
-        artistName = (EditText) rootView.findViewById(R.id.activity_artists_search_text);
+        artistName = (SearchView) rootView.findViewById(R.id.activity_artists_search_text);
 
         artistAdapter = new FindArtistListAdapter(getActivity(), R.layout.list_layout_artists, returnedArtists);
 
@@ -86,6 +89,24 @@ public class FindArtistFragment extends Fragment {
     public void onStart()
     {
         super.onStart();
+
+        // SearchView Suggested by Udacity Reviewer
+        artistName.setIconifiedByDefault(false);
+        artistName.setQueryHint(getResources().getString(R.string.artist_search_hint));
+        artistName.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String s) {
+                getArtists(s);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String s) {
+                return false;
+            }
+        });
+
+        /*
         artistName.setOnEditorActionListener(new EditText.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
@@ -100,7 +121,7 @@ public class FindArtistFragment extends Fragment {
                 }
                 return false;
             }
-        });
+        });*/
 
         artistList.setOnItemClickListener(new ListView.OnItemClickListener() {
             @Override
@@ -157,31 +178,43 @@ public class FindArtistFragment extends Fragment {
 
     private void getArtists(String artistName)
     {
-        SpotifyApi spotifyApi = new SpotifyApi();
-        SpotifyService spotifyService = spotifyApi.getService();
-        spotifyService.searchArtists(artistName, new Callback<ArtistsPager>() {
-            @Override
-            public void success(ArtistsPager artistsPager, Response response) {
-                if (artistsPager != null)
-                    assignArtists((ArrayList) artistsPager.artists.items);
+        if(isOnline()) {
+            SpotifyApi spotifyApi = new SpotifyApi();
+            SpotifyService spotifyService = spotifyApi.getService();
+            spotifyService.searchArtists(artistName, new Callback<ArtistsPager>() {
+                @Override
+                public void success(ArtistsPager artistsPager, Response response) {
+                    if (artistsPager != null)
+                        assignArtists((ArrayList) artistsPager.artists.items);
 
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (returnedArtists.size() == 0)
-                            makeToast("No Artists Found, Try Refining Your Search\n"
-                                    + "Or Check Your Internet Connection", Toast.LENGTH_LONG);
-                        else
-                            refreshAdapter();
-                    }
-                });
-            }
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (returnedArtists.size() == 0)
+                                makeToast(getResources().getString(R.string.no_artist), Toast.LENGTH_LONG);
+                            else
+                                refreshAdapter();
+                        }
+                    });
+                }
 
-            @Override
-            public void failure(RetrofitError error) {
-                Log.e(LOG_TAG, error.toString());
-            }
-        });
+                @Override
+                public void failure(RetrofitError error) {
+                    Log.e(LOG_TAG, error.toString());
+                }
+            });
+        }
+        else
+            makeToast(getResources().getString(R.string.not_online), Toast.LENGTH_LONG);
+    }
+
+    // Code suggested by Udacity Reviewer
+    private boolean isOnline()
+    {
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 
     private void assignArtists(ArrayList<Artist> artists){
