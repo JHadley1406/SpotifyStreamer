@@ -1,20 +1,38 @@
 package com.hhi.training.spotifystreamer;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
 
-public class FindArtistActivity extends ActionBarActivity {
+public class FindArtistActivity extends ActionBarActivity implements FindArtistFragment.FragmentCallback {
 
-    public final String LOG_TAG = FindArtistActivity.class.getSimpleName();
+    private final String LOG_TAG = FindArtistActivity.class.getSimpleName();
+    private static final String ARTISTFRAGMENT_TAG = "FRAGMENTTAG";
+
+    private boolean mTwoPane;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_find_artist);
+
+        if(findViewById(R.id.top_track_container) != null){
+            mTwoPane = true;
+
+            if(savedInstanceState == null){
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.top_track_container, new TopSongsFragment(), ARTISTFRAGMENT_TAG)
+                        .commit();
+            }
+        } else{
+            mTwoPane = false;
+            getSupportActionBar().setElevation(0f);
+        }
     }
 
     @Override
@@ -32,6 +50,32 @@ public class FindArtistActivity extends ActionBarActivity {
         switch (item.getItemId()){
             default:
                 return super.onOptionsItemSelected(item);
+        }
+    }
+
+    @Override
+    protected void onResume(){
+        super.onResume();
+        //probably don't have to do anything here, but leaving this stub just in case
+    }
+
+    @Override
+    public void onItemSelected(String artistId){
+        if(mTwoPane) {
+            Bundle args = new Bundle();
+            args.putString(IntentContract.ARTISTID, artistId);
+
+            TopSongsFragment fragment = new TopSongsFragment();
+            fragment.setArguments(args);
+
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.top_track_container, fragment, ARTISTFRAGMENT_TAG)
+                    .commit();
+        }else{
+            Intent intent = new Intent(getApplicationContext(), TopSongsActivity.class);
+            intent.putExtra(IntentContract.ARTISTID, artistId);
+            intent.putExtra(IntentContract.IS_SINGLE_PANE, true);
+            startActivity(intent);
         }
     }
 }

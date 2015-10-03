@@ -1,45 +1,32 @@
 package com.hhi.training.spotifystreamer;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.AsyncTask;
+import android.net.Uri;
 import android.os.Bundle;
-import android.app.Fragment;
-import android.support.v7.widget.LinearLayoutCompat;
+import android.support.v4.app.Fragment;
 import android.support.v7.widget.SearchView;
-import android.text.Editable;
-import android.text.InputType;
-import android.text.TextWatcher;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
-import android.widget.EditText;
 import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.List;
 
 import kaaes.spotify.webapi.android.SpotifyApi;
 import kaaes.spotify.webapi.android.SpotifyService;
 import kaaes.spotify.webapi.android.models.Artist;
-import kaaes.spotify.webapi.android.models.Artists;
 import kaaes.spotify.webapi.android.models.ArtistsPager;
 import retrofit.Callback;
 import retrofit.RetrofitError;
@@ -50,7 +37,6 @@ public class FindArtistFragment extends Fragment {
     public final String LOG_TAG = FindArtistFragment.class.getSimpleName();
 
     private final String ARTIST_TAG = "artists";
-    private final String ARTISTID = "artistid";
 
     private final String DEFAULT_IMAGE = "android.resource://com.hhi.training.spotifystreamer/" + R.mipmap.ic_launcher;
     private ArrayList<ArtistData> returnedArtists;
@@ -58,12 +44,25 @@ public class FindArtistFragment extends Fragment {
     private SearchView artistName;
     private ListView artistList;
 
+    private int mListPosition;
+
     private FindArtistListAdapter artistAdapter;
 
     private Toast artistToast;
 
+    public interface FragmentCallback{
+        public void onItemSelected(String artistId);
+    }
+
     public FindArtistFragment() {
         // Required empty public constructor
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState){
+        super.onCreate(savedInstanceState);
+
+        setHasOptionsMenu(true);
     }
 
 
@@ -81,6 +80,11 @@ public class FindArtistFragment extends Fragment {
 
         artistList = (ListView) rootView.findViewById(R.id.activity_artists_listview);
         artistList.setAdapter(artistAdapter);
+
+
+        if(savedInstanceState != null && savedInstanceState.containsKey(IntentContract.SELECTED_KEY)){
+            mListPosition = savedInstanceState.getInt(IntentContract.SELECTED_KEY);
+        }
 
         return rootView;
     }
@@ -106,37 +110,27 @@ public class FindArtistFragment extends Fragment {
             }
         });
 
-        /*
-        artistName.setOnEditorActionListener(new EditText.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_DONE ||
-                        actionId == EditorInfo.IME_ACTION_SEARCH ||
-                        actionId == KeyEvent.ACTION_DOWN) {
-                    getArtists(v.getText().toString());
-                    ((InputMethodManager) getActivity()
-                            .getSystemService(Activity.INPUT_METHOD_SERVICE))
-                            .toggleSoftInput(0, InputMethodManager.HIDE_NOT_ALWAYS);
-                    return true;
-                }
-                return false;
-            }
-        });*/
-
         artistList.setOnItemClickListener(new ListView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Intent artistIntent = new Intent(artistAdapter.getContext(), TopSongsActivity.class);
-                artistIntent.putExtra(ARTISTID, returnedArtists.get(position).getArtistId());
-                startActivity(artistIntent);
+                //Intent artistIntent = new Intent(artistAdapter.getContext(), TopSongsActivity.class);
+                //artistIntent.putExtra(IntentContract.ARTISTID, returnedArtists.get(position).getArtistId());
+                //startActivity(artistIntent);
+                ((FragmentCallback) getActivity())
+                        .onItemSelected(returnedArtists.get(position).getArtistId());
+                mListPosition = position;
             }
         });
+
 
     }
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState){
         savedInstanceState.putParcelableArrayList(ARTIST_TAG, returnedArtists);
+        if(mListPosition != ListView.INVALID_POSITION){
+            savedInstanceState.putInt(IntentContract.SELECTED_KEY, mListPosition);
+        }
         super.onSaveInstanceState(savedInstanceState);
     }
 
@@ -161,8 +155,12 @@ public class FindArtistFragment extends Fragment {
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
 
-
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        getActivity().sendBroadcast(new Intent().setAction(BroadcastContract.MSG_PAUSE_TRACK));
     }
 
     private void makeToast(String message, int length)

@@ -16,15 +16,15 @@ public class ArtistData implements Parcelable {
 
 
     public ArtistData(String artistId, String artistName, String artistImage){
-        this.artistId = artistId;
-        this.artistName = artistName;
-        this.artistImage = artistImage;
+        this.setArtistId(artistId);
+        this.setArtistName(artistName);
+        this.setArtistImage(artistImage);
     }
 
     public ArtistData(Parcel in){
-        this.artistId = in.readString();
-        this.artistName = in.readString();
-        this.artistImage = in.readString();
+        this.setArtistId(in.readString());
+        this.setArtistName(in.readString());
+        this.setArtistImage(in.readString());
     }
 
     public String getArtistName() {
@@ -59,9 +59,9 @@ public class ArtistData implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeString(artistId);
-        dest.writeString(artistName);
-        dest.writeString(artistImage);
+        dest.writeString(this.getArtistId());
+        dest.writeString(this.getArtistName());
+        dest.writeString(this.getArtistImage());
     }
 
     public static final Parcelable.Creator<ArtistData> CREATOR = new Parcelable.Creator<ArtistData>(){
