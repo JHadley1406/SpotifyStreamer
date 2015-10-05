@@ -1,5 +1,6 @@
 package com.hhi.training.spotifystreamer;
 
+import android.content.Intent;
 import android.content.IntentFilter;
 
 /**
@@ -55,7 +56,17 @@ public class BroadcastContract {
     public static IntentFilter getTopSongsFilter(){
         IntentFilter topSongsFilter = new IntentFilter();
         topSongsFilter.addAction(MSG_ASYNC_READY);
+        topSongsFilter.addAction(MSG_TRACK_PAUSED);
+        topSongsFilter.addAction(MSG_TRACK_PLAYING);
+        topSongsFilter.addAction(MSG_GET_MUSIC_CONTROL);
         return topSongsFilter;
+    }
+
+    public static IntentFilter getArtistsFilter(){
+        IntentFilter artistsFilter = new IntentFilter();
+        artistsFilter.addAction(MSG_TRACK_PAUSED);
+        artistsFilter.addAction(MSG_TRACK_PLAYING);
+        return artistsFilter;
     }
 
 }

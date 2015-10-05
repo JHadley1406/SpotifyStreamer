@@ -1,7 +1,9 @@
 package com.hhi.training.spotifystreamer;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -49,6 +51,18 @@ public class FindArtistFragment extends Fragment {
     private FindArtistListAdapter artistAdapter;
 
     private Toast artistToast;
+    private boolean mTrackPaused;
+
+    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if(intent.getAction().equals(BroadcastContract.MSG_TRACK_PAUSED)){
+                mTrackPaused= intent.getBooleanExtra(IntentContract.IS_PAUSED, true);
+            } else if(intent.getAction().equals(BroadcastContract.MSG_TRACK_PLAYING)){
+                mTrackPaused = intent.getBooleanExtra(IntentContract.IS_PAUSED, false);
+            }
+        }
+    };
 
     public interface FragmentCallback{
         public void onItemSelected(String artistId);
@@ -86,6 +100,7 @@ public class FindArtistFragment extends Fragment {
             mListPosition = savedInstanceState.getInt(IntentContract.SELECTED_KEY);
         }
 
+        getActivity().registerReceiver(mReceiver, BroadcastContract.getArtistsFilter());
         return rootView;
     }
 
@@ -128,6 +143,7 @@ public class FindArtistFragment extends Fragment {
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState){
         savedInstanceState.putParcelableArrayList(ARTIST_TAG, returnedArtists);
+        savedInstanceState.putBoolean(IntentContract.IS_PAUSED, mTrackPaused);
         if(mListPosition != ListView.INVALID_POSITION){
             savedInstanceState.putInt(IntentContract.SELECTED_KEY, mListPosition);
         }
@@ -138,6 +154,10 @@ public class FindArtistFragment extends Fragment {
     public void onViewStateRestored(Bundle savedInstanceState){
         super.onViewStateRestored(savedInstanceState);
         if(savedInstanceState != null) {
+            mTrackPaused = savedInstanceState.getBoolean(IntentContract.IS_PAUSED);
+            if(!mTrackPaused){
+                getActivity().sendBroadcast(new Intent().setAction(BroadcastContract.MSG_PLAY_TRACK));
+            }
             returnedArtists = savedInstanceState.getParcelableArrayList(ARTIST_TAG);
             refreshAdapter();
         }
@@ -160,6 +180,7 @@ public class FindArtistFragment extends Fragment {
     @Override
     public void onDestroy(){
         super.onDestroy();
+        getActivity().unregisterReceiver(mReceiver);
         getActivity().sendBroadcast(new Intent().setAction(BroadcastContract.MSG_PAUSE_TRACK));
     }
 
@@ -173,6 +194,7 @@ public class FindArtistFragment extends Fragment {
         artistToast = Toast.makeText(getActivity(), message, length);
         artistToast.show();
     }
+
 
     private void getArtists(String artistName)
     {

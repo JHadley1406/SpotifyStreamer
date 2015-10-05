@@ -49,6 +49,7 @@ public class TopSongsFragment extends Fragment {
 
     private boolean mServiceBound;
     private boolean mSinglePane;
+    private boolean mTrackPaused;
 
     private final String SONG_TAG = "songs";
     private final String COUNTRY_OPTION = "country";
@@ -73,13 +74,21 @@ public class TopSongsFragment extends Fragment {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(BroadcastContract.MSG_ASYNC_READY)) {
-                if (mNotificationPanel == null) {
-                    mNotificationPanel = new MediaNotification(
-                            getActivity().getApplicationContext()
-                            ,(SongData) intent.getParcelableExtra(IntentContract.TRACK)
-                    );
+                launchNotification((SongData) intent.getParcelableExtra(IntentContract.TRACK));
+                mTrackPaused = intent.getBooleanExtra(IntentContract.IS_PAUSED, false);
+            } else if (intent.getAction().equals(BroadcastContract.MSG_TRACK_PAUSED)){
+                mTrackPaused = intent.getBooleanExtra(IntentContract.IS_PAUSED, true);
+            } else if (intent.getAction().equals(BroadcastContract.MSG_TRACK_PLAYING)){
+                mTrackPaused = intent.getBooleanExtra(IntentContract.IS_PAUSED, false);
+            } else if (intent.getAction().equals(BroadcastContract.MSG_GET_MUSIC_CONTROL)) {
+                mTrackPaused = intent.getBooleanExtra(IntentContract.IS_PAUSED, false);
+                Log.i(LOG_TAG, "in broadcast reciever, mTrackPaused is: " + mTrackPaused);
+                if(!mTrackPaused) {
+                    getActivity().sendBroadcast(new Intent().setAction(BroadcastContract.MSG_PLAY_TRACK));
                 }
+                launchNotification(mReturnedSongs.get(mListPosition));
             }
+
         }
     };
 
@@ -107,7 +116,6 @@ public class TopSongsFragment extends Fragment {
 
         Bundle arguments = getArguments();
         if(arguments != null){
-
             mArtistId = arguments.getString(IntentContract.ARTISTID);
             mSinglePane = arguments.getBoolean(IntentContract.IS_SINGLE_PANE, false);
         }
@@ -130,7 +138,6 @@ public class TopSongsFragment extends Fragment {
             mListPosition = savedInstanceState.getInt(IntentContract.SELECTED_KEY);
         }
 
-
         return rootView;
     }
 
@@ -144,6 +151,7 @@ public class TopSongsFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Log.i(LOG_TAG, "Album Image: " + mReturnedSongs.get(position).getAlbumImage());
+                Log.i(LOG_TAG, "isPaused is: " + mTrackPaused);
                 Intent playService = new Intent();
                 playService.setAction(BroadcastContract.MSG_GET_MUSIC_SERVICE);
                 playService.putParcelableArrayListExtra(IntentContract.TRACKS, mReturnedSongs);
@@ -159,6 +167,7 @@ public class TopSongsFragment extends Fragment {
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState){
         savedInstanceState.putParcelableArrayList(SONG_TAG, mReturnedSongs);
+        Log.i(LOG_TAG, "in onSaveInstanceState, mTrackPaused is: " + mTrackPaused);
         if(mListPosition != ListView.INVALID_POSITION){
             savedInstanceState.putInt(IntentContract.SELECTED_KEY, mListPosition);
         }
@@ -171,7 +180,8 @@ public class TopSongsFragment extends Fragment {
         super.onViewStateRestored(savedInstanceState);
         if(savedInstanceState != null) {
             mReturnedSongs = savedInstanceState.getParcelableArrayList(SONG_TAG);
-
+            mListPosition = savedInstanceState.getInt(IntentContract.SELECTED_KEY);
+            getActivity().sendBroadcast(new Intent().setAction(BroadcastContract.MSG_SEND_TRACK));
             refreshAdapter();
         }
     }
@@ -179,9 +189,9 @@ public class TopSongsFragment extends Fragment {
     @Override
     public void onDestroy(){
         super.onDestroy();
+        doUnbindService();
         if(mNotificationPanel != null)
             mNotificationPanel.notificationCancel();
-        doUnbindService();
         getActivity().unregisterReceiver(mReceiver);
     }
 
@@ -324,5 +334,14 @@ public class TopSongsFragment extends Fragment {
         mSongAdapter.clear();
         mSongAdapter.addAll(mReturnedSongs);
         mSongAdapter.notifyDataSetChanged();
+    }
+
+    private void launchNotification(SongData track){
+        if (mNotificationPanel == null) {
+            mNotificationPanel = new MediaNotification(
+                    getActivity().getApplicationContext()
+                    , track
+            );
+        }
     }
 }

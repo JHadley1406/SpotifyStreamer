@@ -25,7 +25,7 @@ public class PlayService extends Service implements MediaPlayer.OnPreparedListen
     private ArrayList<SongData> mTracks = null;
 
     private int mTrackNumber;
-    private int mSongPosition;
+    private int mTrackPosition;
 
     private MediaPlayer mPlayer = null;
 
@@ -46,12 +46,9 @@ public class PlayService extends Service implements MediaPlayer.OnPreparedListen
                 playSong();
             } else if(intent.getAction().equals(BroadcastContract.MSG_PLAY_TRACK)){
                 playSong();
-                mOutgoingIntent.setAction(BroadcastContract.MSG_TRACK_PLAYING);
-                sendBroadcast(mOutgoingIntent);
             } else if(intent.getAction().equals(BroadcastContract.MSG_PAUSE_TRACK)){
+                Log.i(LOG_TAG, "Received Track paused call");
                 pauseSong();
-                mOutgoingIntent.setAction(BroadcastContract.MSG_TRACK_PAUSED);
-                sendBroadcast(mOutgoingIntent);
             } else if(intent.getAction().equals(BroadcastContract.MSG_NEXT_TRACK)) {
                 incSong();
                 assignSong();
@@ -67,9 +64,12 @@ public class PlayService extends Service implements MediaPlayer.OnPreparedListen
                         , intent.getIntExtra(IntentContract.TRACK_POSITION, 0));
                 sendBroadcast(mOutgoingIntent);
             } else if(intent.getAction().equals(BroadcastContract.MSG_SEND_TRACK)){
+                Log.i(LOG_TAG, "In broadcast receiver, mIsPaused is: " + mIsPaused);
                 mOutgoingIntent.setAction(BroadcastContract.MSG_GET_MUSIC_CONTROL);
-                mOutgoingIntent.putExtra(IntentContract.TRACK_NUMBER, mTrackNumber);
-                mOutgoingIntent.putExtra(IntentContract.TRACK_POSITION, mSongPosition);
+                mOutgoingIntent.putExtra(IntentContract.TRACK, mTracks.get(mTrackNumber));
+                mOutgoingIntent.putExtra(IntentContract.TRACK_POSITION, mTrackPosition);
+                mOutgoingIntent.putExtra(IntentContract.TRACK_DURATION, getDuration());
+                mOutgoingIntent.putExtra(IntentContract.IS_PAUSED, mIsPaused);
                 sendBroadcast(mOutgoingIntent);
             }
         }
@@ -81,7 +81,7 @@ public class PlayService extends Service implements MediaPlayer.OnPreparedListen
 
     public void onCreate(){
         super.onCreate();
-        mSongPosition = 0;
+        mTrackPosition = 0;
         initMusicPlayer();
         mOutgoingIntent = new Intent();
         mIntentFilter = BroadcastContract.getServiceFilter();
@@ -100,7 +100,6 @@ public class PlayService extends Service implements MediaPlayer.OnPreparedListen
 
     @Override
     public void onDestroy(){
-        Log.i(LOG_TAG, "In onDestroy");
         unregisterReceiver(mReceiver);
     }
 
@@ -132,14 +131,15 @@ public class PlayService extends Service implements MediaPlayer.OnPreparedListen
 
     @Override
     public void onPrepared(MediaPlayer mp) {
+        mp.start();
+        mIsPaused = false;
         mOutgoingIntent.setAction(BroadcastContract.MSG_ASYNC_READY);
         mOutgoingIntent.putExtra(IntentContract.TRACK_DURATION, getDuration());
         mOutgoingIntent.putExtra(IntentContract.TRACK, mTracks.get(mTrackNumber));
+        mOutgoingIntent.putExtra(IntentContract.IS_PAUSED, mIsPaused);
         sendBroadcast(mOutgoingIntent);
-        mp.start();
         startPlayProgressUpdate();
 
-        mIsPaused = false;
     }
 
     public void initMusicPlayer(){
@@ -158,11 +158,14 @@ public class PlayService extends Service implements MediaPlayer.OnPreparedListen
         if(mIsPaused){
             mPlayer.start();
         }
-        else {
+        else if (!isPlaying()){
             mPlayer.prepareAsync();
         }
         startPlayProgressUpdate();
         mIsPaused = false;
+        mOutgoingIntent.putExtra(IntentContract.IS_PAUSED, mIsPaused);
+        mOutgoingIntent.setAction(BroadcastContract.MSG_TRACK_PLAYING);
+        sendBroadcast(mOutgoingIntent);
     }
 
     private void startPlayProgressUpdate(){
@@ -170,8 +173,9 @@ public class PlayService extends Service implements MediaPlayer.OnPreparedListen
             Runnable notification = new Runnable(){
                 public void run(){
                     startPlayProgressUpdate();
+                    mTrackPosition = mPlayer.getCurrentPosition();
                     mOutgoingIntent.setAction(BroadcastContract.MSG_SEND_POS);
-                    mOutgoingIntent.putExtra(IntentContract.TRACK_POSITION, mPlayer.getCurrentPosition());
+                    mOutgoingIntent.putExtra(IntentContract.TRACK_POSITION, mTrackPosition);
                     sendBroadcast(mOutgoingIntent);
                 }
             };
@@ -200,6 +204,9 @@ public class PlayService extends Service implements MediaPlayer.OnPreparedListen
         if(mPlayer.isPlaying()) {
             mPlayer.pause();
             mIsPaused = true;
+            mOutgoingIntent.setAction(BroadcastContract.MSG_TRACK_PAUSED);
+            mOutgoingIntent.putExtra(IntentContract.IS_PAUSED, mIsPaused);
+            sendBroadcast(mOutgoingIntent);
         }
     }
 

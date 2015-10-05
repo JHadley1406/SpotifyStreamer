@@ -42,21 +42,21 @@ public class MediaNotification {
         @Override
         public void onReceive(Context context, Intent intent) {
             if(intent.getAction().equals(BroadcastContract.MSG_ASYNC_READY)){
-                mPlaybackPaused = false;
-                mRemoteViews.setImageViewResource(R.id.note_play_pause, android.R.drawable.ic_media_pause);
+                mPlaybackPaused = intent.getBooleanExtra(IntentContract.IS_PAUSED, false);
                 mTrack = intent.getParcelableExtra(IntentContract.TRACK);
                 setPlayPauseListener();
                 buildNotification();
                 updateNotification();
+                setPlayPauseButton();
             }  else if(intent.getAction().equals(BroadcastContract.MSG_TRACK_PLAYING)){
-                mRemoteViews.setImageViewResource(R.id.note_play_pause, android.R.drawable.ic_media_pause);
-                mPlaybackPaused = false;
+                mPlaybackPaused = intent.getBooleanExtra(IntentContract.IS_PAUSED, false);
                 setPlayPauseListener();
                 updateNotification();
+                setPlayPauseButton();
             } else if(intent.getAction().equals(BroadcastContract.MSG_TRACK_PAUSED)){
-                mRemoteViews.setImageViewResource(R.id.note_play_pause, android.R.drawable.ic_media_play);
-                mPlaybackPaused = true;
+                mPlaybackPaused = intent.getBooleanExtra(IntentContract.IS_PAUSED, true);
                 setPlayPauseListener();
+                setPlayPauseButton();
                 updateNotification();
             }
         }
@@ -107,6 +107,14 @@ public class MediaNotification {
         mRemoteViews.setOnClickPendingIntent(R.id.note_prev_track, prevTrackIntent);
         setPlayPauseListener();
 
+    }
+
+    private void setPlayPauseButton(){
+        if(mPlaybackPaused){
+            mRemoteViews.setImageViewResource(R.id.note_play_pause, android.R.drawable.ic_media_play);
+        } else {
+            mRemoteViews.setImageViewResource(R.id.note_play_pause, android.R.drawable.ic_media_pause);
+        }
     }
 
     private void setPlayPauseListener() {
